@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank OCR Scanner</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Local Vue 2.0 & Vue I18n -->
+    <script src="js/vue.js"></script>
+    <script src="js/vue-i18n.js"></script>
+
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --surface: #ffffff;
+            --background: #f8fafc;
+            --text-main: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            --success: #10b981;
+            --error: #ef4444;
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--background);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        #app {
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+
+        .lang-switch {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: transparent;
+            border: 1px solid var(--border);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .lang-switch:hover {
+            color: var(--primary);
+            border-color: var(--primary);
+            background: #eff6ff;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.025em;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .card {
+            background: var(--surface);
+            border-radius: 16px;
+            box-shadow: var(--shadow-lg);
+            padding: 2rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        /* Upload Area */
+        .upload-area {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 4rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            background: #fafafa;
+        }
+
+        .upload-area:hover,
+        .upload-area.dragging {
+            border-color: var(--primary);
+            background: #eff6ff;
+            transform: scale(1.005);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .upload-text {
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: var(--text-main);
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-subtext {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Processing State */
+        .processing-state {
+            text-align: center;
+            padding: 3rem 0;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--border);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1.5rem;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .progress-text {
+            font-weight: 500;
+            color: var(--text-main);
+            margin-top: 1rem;
+        }
+
+        /* Result Display */
+        .result-display {
+            animation: fade-in 0.5s ease;
+        }
+
+        @keyframes fade-in {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .result-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .data-grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .data-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .label {
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .value-box {
+            background: #f1f5f9;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .value-box:hover {
+            border-color: var(--primary);
+            background: #ffffff;
+            box-shadow: var(--shadow);
+        }
+
+        .copy-btn {
+            background: transparent;
+            border: none;
+            color: var(--primary);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 0.5rem;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .copy-btn:hover {
+            background: #eff6ff;
+        }
+
+        .actions {
+            margin-top: 2rem;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .reset-btn {
+            background: var(--text-main);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .reset-btn:hover {
+            background: var(--text-secondary);
+        }
+
+        /* Utility */
+        .hidden {
+            display: none;
+        }
+
+        [v-cloak] {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="app" v-cloak>
+        <div class="header">
+            <button class="lang-switch" @click="toggleLanguage">
+                {{ langDisplay }}
+            </button>
+            <h1>{{ $t('title') }}</h1>
+            <p>{{ $t('subtitle') }}</p>
+        </div>
+
+        <!-- Upload View -->
+        <div class="card" v-if="state === 'upload'">
+            <div class="upload-area" :class="{ dragging: isDragging }" @dragover.prevent="isDragging = true"
+                @dragleave.prevent="isDragging = false" @drop.prevent="handleDrop" @click="$refs.fileInput.click()">
+                <input type="file" ref="fileInput" class="hidden" accept="image/*" @change="handleFileSelect">
+                <span class="upload-icon">📄</span>
+                <div class="upload-text">{{ $t('upload_text') }}</div>
+                <div class="upload-subtext">{{ $t('upload_subtext') }}</div>
+            </div>
+        </div>
+
+        <!-- Processing View -->
+        <div class="card" v-else-if="state === 'processing'">
+            <div class="processing-state">
+                <div class="spinner"></div>
+                <h3>{{ $t('processing_title') }}</h3>
+                <p class="upload-subtext">{{ $t('processing_text') }}</p>
+            </div>
+        </div>
+
+        <!-- Result View -->
+        <div class="card result-display" v-else-if="state === 'result'">
+            <div class="result-header">
+                <div class="result-title">{{ $t('result_title') }}</div>
+                <div class="upload-subtext" style="color: var(--success)">✓ {{ $t('scan_complete') }}</div>
+            </div>
+
+            <div class="data-grid">
+                <div class="data-item" v-for="(line, index) in extractedData" :key="index">
+                    <span class="label">{{ $t('detected_text') }} {{ index + 1 }}</span>
+                    <div class="value-box">
+                        <span>{{ line }}</span>
+                        <button class="copy-btn" @click="copyToClipboard(line, $event)">
+                            {{ copyFeedback === line ? $t('copied') : $t('copy') }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button class="reset-btn" @click="reset">{{ $t('scan_new') }}</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const messages = {
+            en: {
+                title: "Universal OCR Scanner",
+                subtitle: "Secure document scanning & information extraction",
+                upload_text: "Click, Drag & Drop, or Paste (Ctrl+V)",
+                upload_subtext: "JPG, PNG scanning supported",
+                processing_title: "Scanning Document...",
+                processing_text: "Extracting information from image",
+                result_title: "Extracted Information",
+                scan_complete: "Scan Complete",
+                copy: "Copy",
+                copied: "Copied!",
+                scan_new: "Scan New Document",
+                error_file_type: "Please upload an image file",
+                error_scan: "Error scanning document. Is the backend server running?",
+                "detected_text": "Detected Line"
+            },
+            zh: {
+                title: "通用 OCR 扫描仪",
+                subtitle: "安全文档扫描与信息提取",
+                upload_text: "点击上传，拖拽文件，或 Ctrl+V 粘贴",
+                upload_subtext: "支持 JPG, PNG 格式",
+                processing_title: "正在扫描文档...",
+                processing_text: "正在从图像中提取信息",
+                result_title: "提取的信息",
+                scan_complete: "扫描完成",
+                copy: "复制",
+                copied: "已复制!",
+                scan_new: "扫描新文档",
+                error_file_type: "请上传图片文件",
+                error_scan: "文档扫描错误。后端服务器是否运行？",
+                "detected_text": "识别文本"
+            }
+        };
+
+        const i18n = new VueI18n({
+            locale: 'en', // set locale
+            messages, // set locale messages
+        });
+
+        new Vue({
+            el: '#app',
+            i18n,
+            data: {
+                state: 'upload', // upload, processing, result
+                isDragging: false,
+                extractedData: {},
+                copyFeedback: null,
+                config: {
+                    apiUrl: 'http://localhost:8866/ocr'
+                }
+            },
+            computed: {
+                langDisplay() {
+                    return this.$i18n.locale === 'en' ? 'EN / 中文' : '中文 / EN';
+                }
+            },
+            mounted() {
+                window.addEventListener('paste', this.handlePaste);
+            },
+            beforeDestroy() {
+                window.removeEventListener('paste', this.handlePaste);
+            },
+            methods: {
+                toggleLanguage() {
+                    this.$i18n.locale = this.$i18n.locale === 'en' ? 'zh' : 'en';
+                },
+                handleFileSelect(event) {
+                    const file = event.target.files[0];
+                    if (file) this.processFile(file);
+                },
+                handleDrop(event) {
+                    this.isDragging = false;
+                    const file = event.dataTransfer.files[0];
+                    if (file) this.processFile(file);
+                },
+                handlePaste(event) {
+                    const items = (event.clipboardData || event.originalEvent.clipboardData).items;
+                    for (let index in items) {
+                        const item = items[index];
+                        if (item.kind === 'file' && item.type.match('image.*')) {
+                            const file = item.getAsFile();
+                            this.processFile(file);
+                            break;
+                        }
+                    }
+                },
+                processFile(file) {
+                    if (!file.type.match('image.*')) {
+                        alert(this.$t('error_file_type'));
+                        return;
+                    }
+
+                    this.state = 'processing';
+                    this.extractedData = {};
+
+                    const formData = new FormData();
+                    formData.append('file', file);
+
+                    fetch(this.config.apiUrl, {
+                        method: 'POST',
+                        body: formData
+                    })
+                        .then(response => {
+                            if (!response.ok) throw new Error('Network response was not ok');
+                            return response.json();
+                        })
+                        .then(data => {
+                            // Backend now returns {"result": ["text1", "text2", ...]}
+                            if (data.result && Array.isArray(data.result)) {
+                                this.extractedData = data.result;
+                            } else {
+                                this.extractedData = [];
+                            }
+                            this.state = 'result';
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            alert(this.$t('error_scan'));
+                            this.state = 'upload';
+                        });
+                },
+                copyToClipboard(text, event) {
+                    if (navigator.clipboard) {
+                        navigator.clipboard.writeText(text).then(() => {
+                            this.showCopyFeedback(text);
+                        });
+                    } else {
+                        const textArea = document.createElement("textarea");
+                        textArea.value = text;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        document.execCommand("copy");
+                        document.body.removeChild(textArea);
+                        this.showCopyFeedback(text);
+                    }
+                },
+                showCopyFeedback(text) {
+                    this.copyFeedback = text;
+                    setTimeout(() => {
+                        this.copyFeedback = null;
+                    }, 1500);
+                },
+                reset() {
+                    this.state = 'upload';
+                    this.extractedData = {};
+                    if (this.$refs.fileInput) {
+                        this.$refs.fileInput.value = '';
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
