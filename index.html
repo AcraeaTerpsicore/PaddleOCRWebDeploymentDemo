@@ -48,7 +48,7 @@
 
         #app {
             width: 100%;
-            max-width: 800px;
+            max-width: 1200px;
         }
 
         .header {
@@ -207,9 +207,70 @@
             font-weight: 600;
         }
 
+        .result-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        @media (max-width: 900px) {
+            .result-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .preview-pane {
+            position: relative;
+            background: #f1f5f9;
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 400px;
+            border: 1px solid var(--border);
+        }
+
+        .preview-img {
+            max-width: 100%;
+            max-height: 70vh;
+            display: block;
+        }
+
+        .bbox-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .bbox {
+            position: absolute;
+            border: 2px solid var(--primary);
+            background: rgba(37, 99, 235, 0.1);
+            transition: all 0.2s;
+        }
+
+        .bbox:hover {
+            background: rgba(37, 99, 235, 0.3);
+            border-color: var(--primary-hover);
+        }
+
+        .data-pane {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
         .data-grid {
             display: grid;
-            gap: 1.5rem;
+            gap: 1rem;
+            max-height: 500px;
+            overflow-y: auto;
+            padding-right: 0.5rem;
         }
 
         .data-item {
@@ -281,6 +342,19 @@
 
         .reset-btn:hover {
             background: var(--text-secondary);
+        }
+
+        .combined-text-area {
+            width: 100%;
+            min-height: 150px;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-family: inherit;
+            font-size: 0.95rem;
+            resize: vertical;
+            background: #fdfdfd;
+            margin-top: 1rem;
         }
 
         .copy-all-btn {
@@ -361,19 +435,37 @@
                 </div>
             </div>
 
-            <div class="data-grid">
-                <div class="data-item" v-for="(line, index) in extractedData" :key="index">
-                    <span class="label">{{ $t('detected_text') }} {{ index + 1 }}</span>
-                    <div class="value-box">
-                        <span>{{ line }}</span>
-                        <button class="copy-btn" @click="copyToClipboard(line, $event)">
-                            {{ copyFeedback === line ? $t('copied') : $t('copy') }}
-                        </button>
+            <div class="result-container">
+                <!-- Left: Image Preview -->
+                <div class="preview-pane" ref="previewPane">
+                    <img :src="imagePreview" class="preview-img" ref="previewImg" @load="updateBboxScale">
+                    <div class="bbox-overlay" v-if="bboxScale > 0">
+                        <div v-for="(item, index) in richData" :key="index" class="bbox" :style="getBboxStyle(item[0])"
+                            :title="item[1][0]">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Data Controls -->
+                <div class="data-pane">
+                    <div class="data-grid">
+                        <div class="data-item" v-for="(line, index) in extractedData" :key="index">
+                            <span class="label">{{ $t('detected_text') }} {{ index + 1 }}</span>
+                            <div class="value-box">
+                                <span>{{ line }}</span>
+                                <button class="copy-btn" @click="copyToClipboard(line, $event)">
+                                    {{ copyFeedback === line ? $t('copied') : $t('copy') }}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="data-item">
+                        <span class="label">{{ $t('combined_text') }}</span>
+                        <textarea class="combined-text-area" v-model="combinedText"></textarea>
                     </div>
                 </div>
             </div>
-
-            <!-- Actions removed from bottom -->
         </div>
     </div>
 
@@ -395,7 +487,8 @@
                 error_scan: "Error scanning document. Is the backend server running?",
                 detected_text: "Detected Line",
                 copy_all: "Copy All",
-                copied_all: "Copied All!"
+                copied_all: "Copied All!",
+                combined_text: "Full Editable Text"
             },
             zh: {
                 title: "通用 OCR 扫描仪",
@@ -413,7 +506,8 @@
                 error_scan: "文档扫描错误。后端服务器是否运行？",
                 detected_text: "识别文本",
                 copy_all: "复制全部",
-                copied_all: "已全部复制!"
+                copied_all: "已全部复制!",
+                combined_text: "全部可编辑文本"
             }
         };
 
@@ -429,6 +523,9 @@
                 state: 'upload', // upload, processing, result
                 isDragging: false,
                 extractedData: [],
+                richData: [], // Store boxes
+                imagePreview: null,
+                bboxScale: 0,
                 copyFeedback: null,
                 copyAllFeedback: false,
                 config: {
@@ -438,6 +535,14 @@
             computed: {
                 langDisplay() {
                     return this.$i18n.locale === 'en' ? 'EN / 中文' : '中文 / EN';
+                },
+                combinedText: {
+                    get() {
+                        return this.extractedData.join('\n');
+                    },
+                    set(val) {
+                        // Optional: sync back to grid if needed, but usually just for display/copy
+                    }
                 }
             },
             mounted() {
@@ -476,8 +581,16 @@
                         return;
                     }
 
+                    // Create preview
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        this.imagePreview = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+
                     this.state = 'processing';
-                    this.extractedData = {};
+                    this.extractedData = [];
+                    this.richData = [];
 
                     const formData = new FormData();
                     formData.append('file', file);
@@ -491,9 +604,13 @@
                             return response.json();
                         })
                         .then(data => {
-                            // Backend now returns {"result": ["text1", "text2", ...]}
                             if (data.result && Array.isArray(data.result)) {
                                 this.extractedData = data.result;
+                                // Handle full_data for bboxes
+                                // Flatting PaddleOCR result: it's often [[ [box], [text, score] ], ...]
+                                if (data.full_data && Array.isArray(data.full_data)) {
+                                    this.richData = data.full_data.flat().filter(item => Array.isArray(item) && item.length === 2);
+                                }
                             } else {
                                 this.extractedData = [];
                             }
@@ -504,6 +621,38 @@
                             alert(this.$t('error_scan'));
                             this.state = 'upload';
                         });
+                },
+                updateBboxScale() {
+                    if (!this.$refs.previewImg) return;
+                    const img = this.$refs.previewImg;
+                    // Scale = displayed resolution / original resolution
+                    // But we don't know original yet unless we load it. 
+                    // Let's get natural size.
+                    this.bboxScale = img.clientWidth / img.naturalWidth;
+                },
+                getBboxStyle(points) {
+                    // points is [[x1, y1], [x2, y1], [x2, y2], [x1, y2]]
+                    const xs = points.map(p => p[0]);
+                    const ys = points.map(p => p[1]);
+                    const minX = Math.min(...xs);
+                    const maxX = Math.max(...xs);
+                    const minY = Math.min(...ys);
+                    const maxY = Math.max(...ys);
+
+                    const scale = this.bboxScale;
+                    const img = this.$refs.previewImg;
+                    if (!img) return {};
+
+                    // Calculate offset if image is centered
+                    const leftOffset = (this.$refs.previewPane.clientWidth - img.clientWidth) / 2;
+                    const topOffset = (this.$refs.previewPane.clientHeight - img.clientHeight) / 2;
+
+                    return {
+                        left: (minX * scale + leftOffset) + 'px',
+                        top: (minY * scale + topOffset) + 'px',
+                        width: ((maxX - minX) * scale) + 'px',
+                        height: ((maxY - minY) * scale) + 'px'
+                    };
                 },
                 copyToClipboard(text, event) {
                     if (navigator.clipboard) {
@@ -550,7 +699,9 @@
                 },
                 reset() {
                     this.state = 'upload';
-                    this.extractedData = {};
+                    this.extractedData = [];
+                    this.richData = [];
+                    this.imagePreview = null;
                     if (this.$refs.fileInput) {
                         this.$refs.fileInput.value = '';
                     }

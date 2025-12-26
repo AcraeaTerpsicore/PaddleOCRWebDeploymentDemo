@@ -62,29 +62,31 @@ async def recognize(file: UploadFile = File(...)):
                              final_result.append(line[1][0])
         
         # If we didn't extract anything specific but have content, fall back to robust serialization
-        if not final_result and result_raw:
-             # Just try to serialize the whole thing, but include dict handling now
-             def to_serializable(val):
-                if isinstance(val, (np.integer, np.int64, np.int32)):
-                    return int(val)
-                if isinstance(val, (np.floating, np.float32, np.float64)):
-                    return float(val)
-                if isinstance(val, np.ndarray):
+        def to_serializable(val):
+            if isinstance(val, (np.integer, np.int64, np.int32)):
+                return int(val)
+            if isinstance(val, (np.floating, np.float32, np.float64)):
+                return float(val)
+            if isinstance(val, np.ndarray):
+                return val.tolist()
+            if isinstance(val, list):
+                return [to_serializable(x) for x in val]
+            if isinstance(val, tuple):
+                return tuple(to_serializable(x) for x in val)
+            if isinstance(val, dict):
+                return {k: to_serializable(v) for k, v in val.items()}
+            # Fallback: convert unknown types to string
+            if hasattr(val, "tolist"):
                     return val.tolist()
-                if isinstance(val, list):
-                    return [to_serializable(x) for x in val]
-                if isinstance(val, tuple):
-                    return tuple(to_serializable(x) for x in val)
-                if isinstance(val, dict):
-                    return {k: to_serializable(v) for k, v in val.items()}
-                # Fallback: convert unknown types to string
-                if hasattr(val, "tolist"):
-                     return val.tolist()
-                return str(val)
-             
+            return str(val)
+
+        if not final_result and result_raw:
              final_result = to_serializable(result_raw)
         
-        return {"result": final_result}
+        return {
+            "result": final_result,
+            "full_data": to_serializable(result_raw)
+        }
     except Exception as e:
         import traceback
         traceback.print_exc()
