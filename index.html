@@ -274,6 +274,26 @@
             background: var(--text-secondary);
         }
 
+        .copy-all-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-right: 1rem;
+        }
+
+        .copy-all-btn:hover {
+            background: var(--primary-hover);
+        }
+
+        .copy-all-btn.success {
+            background: var(--success);
+        }
+
         /* Utility */
         .hidden {
             display: none;
@@ -336,6 +356,10 @@
             </div>
 
             <div class="actions">
+                <button v-if="extractedData.length > 0" class="copy-all-btn" :class="{ success: copyAllFeedback }"
+                    @click="copyAll">
+                    {{ copyAllFeedback ? $t('copied_all') : $t('copy_all') }}
+                </button>
                 <button class="reset-btn" @click="reset">{{ $t('scan_new') }}</button>
             </div>
         </div>
@@ -357,7 +381,9 @@
                 scan_new: "Scan New Document",
                 error_file_type: "Please upload an image file",
                 error_scan: "Error scanning document. Is the backend server running?",
-                "detected_text": "Detected Line"
+                detected_text: "Detected Line",
+                copy_all: "Copy All",
+                copied_all: "Copied All!"
             },
             zh: {
                 title: "通用 OCR 扫描仪",
@@ -373,7 +399,9 @@
                 scan_new: "扫描新文档",
                 error_file_type: "请上传图片文件",
                 error_scan: "文档扫描错误。后端服务器是否运行？",
-                "detected_text": "识别文本"
+                detected_text: "识别文本",
+                copy_all: "复制全部",
+                copied_all: "已全部复制!"
             }
         };
 
@@ -388,8 +416,9 @@
             data: {
                 state: 'upload', // upload, processing, result
                 isDragging: false,
-                extractedData: {},
+                extractedData: [],
                 copyFeedback: null,
+                copyAllFeedback: false,
                 config: {
                     apiUrl: 'http://localhost:8866/ocr'
                 }
@@ -483,6 +512,28 @@
                     this.copyFeedback = text;
                     setTimeout(() => {
                         this.copyFeedback = null;
+                    }, 1500);
+                },
+                copyAll() {
+                    const allText = this.extractedData.join('\n');
+                    if (navigator.clipboard) {
+                        navigator.clipboard.writeText(allText).then(() => {
+                            this.showCopyAllFeedback();
+                        });
+                    } else {
+                        const textArea = document.createElement("textarea");
+                        textArea.value = allText;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        document.execCommand("copy");
+                        document.body.removeChild(textArea);
+                        this.showCopyAllFeedback();
+                    }
+                },
+                showCopyAllFeedback() {
+                    this.copyAllFeedback = true;
+                    setTimeout(() => {
+                        this.copyAllFeedback = false;
                     }, 1500);
                 },
                 reset() {
