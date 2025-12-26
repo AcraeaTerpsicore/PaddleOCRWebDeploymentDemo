@@ -192,6 +192,14 @@
             margin-bottom: 1.5rem;
             padding-bottom: 1rem;
             border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .result-header-actions {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
         }
 
         .result-title {
@@ -263,11 +271,12 @@
             background: var(--text-main);
             color: white;
             border: none;
-            padding: 0.75rem 1.5rem;
+            padding: 0.6rem 1.2rem;
             border-radius: 8px;
             font-weight: 600;
             cursor: pointer;
             transition: background 0.2s;
+            white-space: nowrap;
         }
 
         .reset-btn:hover {
@@ -278,12 +287,12 @@
             background: var(--primary);
             color: white;
             border: none;
-            padding: 0.75rem 1.5rem;
+            padding: 0.6rem 1.2rem;
             border-radius: 8px;
             font-weight: 600;
             cursor: pointer;
             transition: background 0.2s;
-            margin-right: 1rem;
+            white-space: nowrap;
         }
 
         .copy-all-btn:hover {
@@ -339,8 +348,17 @@
         <!-- Result View -->
         <div class="card result-display" v-else-if="state === 'result'">
             <div class="result-header">
-                <div class="result-title">{{ $t('result_title') }}</div>
-                <div class="upload-subtext" style="color: var(--success)">✓ {{ $t('scan_complete') }}</div>
+                <div>
+                    <div class="result-title">{{ $t('result_title') }}</div>
+                    <div class="upload-subtext" style="color: var(--success)">✓ {{ $t('scan_complete') }}</div>
+                </div>
+                <div class="result-header-actions">
+                    <button v-if="extractedData.length > 0" class="copy-all-btn" :class="{ success: copyAllFeedback }"
+                        @click="copyAll">
+                        {{ copyAllFeedback ? $t('copied_all') : $t('copy_all') }}
+                    </button>
+                    <button class="reset-btn" @click="reset">{{ $t('scan_new') }}</button>
+                </div>
             </div>
 
             <div class="data-grid">
@@ -355,13 +373,7 @@
                 </div>
             </div>
 
-            <div class="actions">
-                <button v-if="extractedData.length > 0" class="copy-all-btn" :class="{ success: copyAllFeedback }"
-                    @click="copyAll">
-                    {{ copyAllFeedback ? $t('copied_all') : $t('copy_all') }}
-                </button>
-                <button class="reset-btn" @click="reset">{{ $t('scan_new') }}</button>
-            </div>
+            <!-- Actions removed from bottom -->
         </div>
     </div>
 
