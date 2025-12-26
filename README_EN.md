@@ -21,13 +21,13 @@ This project provides a web-based Optical Character Recognition (OCR) scanner. I
 2.  **Install server dependencies**:
     - **CPU Version**:
       ```bash
-      pip install paddlepaddle paddleocr fastapi uvicorn opencv-python python-multipart numpy
+      pip install -r requirements.txt
       ```
     - **GPU Version (Recommended)**:
       ```bash
       # For CUDA 12.x environment (like this local setup)
       pip install paddlepaddle-gpu -i https://www.paddlepaddle.org.cn/packages/stable/cu126/
-      pip install paddleocr fastapi uvicorn opencv-python python-multipart numpy
+      pip install -r requirements.txt
       ```
 
 ## Usage
@@ -81,4 +81,9 @@ numpy==2.2.6
 ├─PP-OCRv5_server_det
 ├─PP-OCRv5_server_rec
 └─UVDoc
+```
+
+```text
+~\nvidia-smi
+NVIDIA-SMI 560.94                 Driver Version: 560.94         CUDA Version: 12.6
 ```

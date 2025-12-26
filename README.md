@@ -21,14 +21,15 @@
 1.  **克隆/下载** 本项目代码。
 2.  **安装服务端依赖**:
     - **CPU 版本**:
+      
       ```bash
-      pip install paddlepaddle paddleocr fastapi uvicorn opencv-python python-multipart numpy
+      pip install -r requirements.txt
       ```
     - **GPU 版本 (推荐)**:
       ```bash
       # 针对 CUDA 12.x 环境 (如 本地环境)
       pip install paddlepaddle-gpu -i https://www.paddlepaddle.org.cn/packages/stable/cu126/
-      pip install paddleocr fastapi uvicorn opencv-python python-multipart numpy
+      pip install -r requirements.txt
       ```
 
 ## 使用说明
@@ -57,7 +58,7 @@ uvicorn server:app --host 0.0.0.0 --port 8866
 
 ## 效果展示
 
-![image-20251223210737131](README.assets/demo_results.png)
+![demo_result](README.assets/demo_result.jpg)
 
 
 ## 版本
@@ -83,3 +84,7 @@ numpy==2.2.6
 └─UVDoc
 ```
 
+```text
+~\nvidia-smi
+NVIDIA-SMI 560.94                 Driver Version: 560.94         CUDA Version: 12.6
+```
